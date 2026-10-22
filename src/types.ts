@@ -66,6 +66,20 @@ export interface DaySessions {
 
 export type SessionsResponse = DaySessions[];
 
+/** Sessão de filme legendada, já normalizada pra exibição */
+export interface SubtitledMovieSession {
+  id: string;
+  /** Ex.: 22/10 */
+  dayAndMonth: string;
+  dayOfWeek: string;
+  /** Ex.: 15:50 */
+  time: string;
+  fullDate: string;
+  room: string;
+  price: number;
+  siteURL: string | null;
+}
+
 /** Filme com somente as sessões legendadas, pronto para exibição */
 export interface SubtitledMovie {
   id: string;
@@ -73,16 +87,5 @@ export interface SubtitledMovie {
   originalTitle: string;
   contentRating: string;
   siteURL: string;
-  sessions: Array<{
-    id: string;
-    /** Ex.: 22/10 */
-    dayAndMonth: string;
-    dayOfWeek: string;
-    /** Ex.: 15:50 */
-    time: string;
-    fullDate: string;
-    room: string;
-    price: number;
-    siteURL: string | null;
-  }>;
+  sessions: SubtitledMovieSession[];
 }

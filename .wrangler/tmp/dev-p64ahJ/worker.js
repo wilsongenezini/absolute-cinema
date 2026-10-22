@@ -1,13 +1,132 @@
 var __defProp = Object.defineProperty;
 var __name = (target, value) => __defProp(target, "name", { value, configurable: true });
 
+// src/grupocine.ts
+var SITE_BASE = "https://www.grupocine.com.br";
+async function fetchGrupocineHtml(programacaoUrl) {
+  const response = await fetch(programacaoUrl, {
+    signal: AbortSignal.timeout(2e4),
+    headers: {
+      accept: "text/html",
+      // o site é renderizado por template server-side; botão padrão basta
+      "user-agent": "absolute-cinema/1.0 (+https://github.com/wilsongenezini/absolute-cinema)"
+    }
+  });
+  if (!response.ok) {
+    throw new Error(
+      `O site do Grupo Cine respondeu ${response.status} (${response.statusText})`
+    );
+  }
+  return await response.text();
+}
+__name(fetchGrupocineHtml, "fetchGrupocineHtml");
+function extractSubtitledMoviesGrupocine(html) {
+  const movieBlocks = matchAll(html, /<div class="filme-box">[\S\s]*?(?=<div class="filme-box">|$)/g);
+  const movies = [];
+  for (const [block = ""] of movieBlocks) {
+    if (!block) continue;
+    const title = firstCapture(block, /titulo-filme">\s*([\S\s]*?)<\/h2>/);
+    if (!title) continue;
+    const sessions = [];
+    for (const [button, buyUrl = "", content = ""] of matchAll(
+      block,
+      /<a href="([^"]+)"[^>]*class="btn btn-horario">([\S\s]*?)<\/a>/g
+    )) {
+      void button;
+      const time = firstCapture(content, /class="fw-bold">\s*(\d{1,2}:\d{2})/);
+      const hidden = normalizeSpaces(
+        firstCapture(content, /class="visually-hidden">([\S\s]*?)<\/span>/) ?? ""
+      );
+      const dateMatch = hidden.match(
+        /,\s*em\s+(\d{2})\/(\d{2})\/(\d{4}),\s*(.*)$/
+      );
+      if (!time || !dateMatch) continue;
+      const [, day, month, year, rest = ""] = dateMatch;
+      if (!day || !month || !year) continue;
+      if (!/legendado/i.test(rest)) continue;
+      const room = firstCapture(rest, /sala\s+([^,]+)/i) ?? "N\xE3o informada";
+      const isoDate = `${year}-${month}-${day}T${time}:00-03:00`;
+      sessions.push({
+        id: buyUrl || `${title}-${isoDate}`,
+        dayAndMonth: `${day}/${month}`,
+        dayOfWeek: weekdayOf(isoDate),
+        time,
+        fullDate: isoDate,
+        room: formatRoom(room),
+        price: 0,
+        siteURL: buyUrl || null
+      });
+    }
+    if (sessions.length === 0) continue;
+    const infoUrl = firstCapture(
+      block,
+      /<a href="(https?:\/\/(?:www\.)?grupocine\.com\.br\/filme\/[^"]+)"/
+    ) ?? "";
+    const contentRating = firstCapture(block, /classificacao-box[^>]*>\s*([^<]*?)\s*</) ?? "";
+    const existing = movies.find((movie) => movie.title === title);
+    if (existing) {
+      existing.sessions.push(...sessions);
+    } else {
+      movies.push({
+        id: infoUrl || title,
+        title,
+        originalTitle: title,
+        contentRating,
+        siteURL: infoUrl || SITE_BASE,
+        sessions
+      });
+    }
+  }
+  return movies.map((movie) => ({
+    ...movie,
+    sessions: [...movie.sessions].sort((a, b) => a.fullDate.localeCompare(b.fullDate))
+  })).sort((a, b) => a.title.localeCompare(b.title, "pt-BR"));
+}
+__name(extractSubtitledMoviesGrupocine, "extractSubtitledMoviesGrupocine");
+function matchAll(source, regex) {
+  return [...source.matchAll(regex)];
+}
+__name(matchAll, "matchAll");
+function normalizeSpaces(text) {
+  return text.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+}
+__name(normalizeSpaces, "normalizeSpaces");
+function firstCapture(source, regex) {
+  return normalizeSpaces(regex.exec(source)?.[1] ?? "");
+}
+__name(firstCapture, "firstCapture");
+function formatRoom(room) {
+  if (/^sala\s*\d+$/i.test(room)) return `Sala ${room.replace(/^sala\s*/i, "")}`;
+  if (/^\d+$/.test(room)) return `Sala ${room}`;
+  return room;
+}
+__name(formatRoom, "formatRoom");
+var WEEKDAY = new Intl.DateTimeFormat("pt-BR", {
+  weekday: "long",
+  timeZone: "America/Sao_Paulo"
+});
+function weekdayOf(isoDate) {
+  const date = new Date(isoDate);
+  return isNaN(date.valueOf()) ? "" : WEEKDAY.format(date);
+}
+__name(weekdayOf, "weekdayOf");
+
 // src/ingresso.ts
 var THEATERS = [
-  { cityId: "473", theaterId: "1537", name: "Cin\xE9polis Shopping Tr\xEAs Lagoas" },
   {
-    cityId: "83",
-    theaterId: "1645",
-    name: "Cine Ara\xFAjo Multiplex Pra\xE7a Nova Ara\xE7atuba"
+    id: "tres-lagoas",
+    name: "Cin\xE9polis Shopping Tr\xEAs Lagoas",
+    source: { kind: "ingresso", cityId: "473", theaterId: "1537" }
+  },
+  {
+    id: "andradina",
+    name: "Grupo Cine Andradina",
+    source: { kind: "grupocine", programacaoUrl: "https://www.grupocine.com.br/andradina/programacao" }
+  },
+  {
+    id: "aracatuba",
+    name: "Cine Ara\xFAjo Multiplex Pra\xE7a Nova Ara\xE7atuba",
+    source: { kind: "ingresso", cityId: "83", theaterId: "1645" }
   }
 ];
 function buildSessionsUrl(cityId, theaterId, partnership = "home") {
@@ -79,11 +198,27 @@ async function fetchSessions(cityId, theaterId) {
   return await response.json();
 }
 __name(fetchSessions, "fetchSessions");
+async function fetchTheater(theater) {
+  if (theater.source.kind === "grupocine") {
+    const html = await fetchGrupocineHtml(theater.source.programacaoUrl);
+    return { theater, movies: extractSubtitledMoviesGrupocine(html) };
+  }
+  const sessions = await fetchSessions(
+    theater.source.cityId,
+    theater.source.theaterId
+  );
+  return { theater, movies: extractSubtitledMovies(sessions) };
+}
+__name(fetchTheater, "fetchTheater");
 async function fetchAllTheaters(theaters) {
   return Promise.all(
     theaters.map(async (theater) => {
-      const sessions = await fetchSessions(theater.cityId, theater.theaterId);
-      return { theater, movies: extractSubtitledMovies(sessions) };
+      try {
+        return await fetchTheater(theater);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Erro inesperado";
+        return { theater, movies: [], error: message };
+      }
     })
   );
 }
@@ -194,7 +329,7 @@ var jsonError = /* @__PURE__ */ __name(async (request, env, _ctx, middlewareCtx)
 }, "jsonError");
 var middleware_miniflare3_json_error_default = jsonError;
 
-// .wrangler/tmp/bundle-DAlJUb/middleware-insertion-facade.js
+// .wrangler/tmp/bundle-AD9ksp/middleware-insertion-facade.js
 var __INTERNAL_WRANGLER_MIDDLEWARE__ = [
   middleware_ensure_req_body_drained_default,
   middleware_miniflare3_json_error_default
@@ -226,7 +361,7 @@ function __facade_invoke__(request, env, ctx, dispatch, finalMiddleware) {
 }
 __name(__facade_invoke__, "__facade_invoke__");
 
-// .wrangler/tmp/bundle-DAlJUb/middleware-loader.entry.ts
+// .wrangler/tmp/bundle-AD9ksp/middleware-loader.entry.ts
 var __Facade_ScheduledController__ = class ___Facade_ScheduledController__ {
   constructor(scheduledTime, cron, noRetry) {
     this.scheduledTime = scheduledTime;

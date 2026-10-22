@@ -1,3 +1,7 @@
+import {
+  extractSubtitledMoviesGrupocine,
+  fetchGrupocineHtml,
+} from "./grupocine.js";
 import type {
   Session,
   SessionsResponse,
@@ -9,17 +13,28 @@ export const DEFAULT_THEATER_ID = "1537";
 
 /** Cinemas monitorados pelo site/CLI */
 export interface TheaterConfig {
-  cityId: string;
-  theaterId: string;
+  id: string;
   name: string;
+  source:
+    | { kind: "ingresso"; cityId: string; theaterId: string }
+    | { kind: "grupocine"; programacaoUrl: string };
 }
 
 export const THEATERS: TheaterConfig[] = [
-  { cityId: "473", theaterId: "1537", name: "Cinépolis Shopping Três Lagoas" },
   {
-    cityId: "83",
-    theaterId: "1645",
+    id: "tres-lagoas",
+    name: "Cinépolis Shopping Três Lagoas",
+    source: { kind: "ingresso", cityId: "473", theaterId: "1537" },
+  },
+  {
+    id: "andradina",
+    name: "Grupo Cine Andradina",
+    source: { kind: "grupocine", programacaoUrl: "https://www.grupocine.com.br/andradina/programacao" },
+  },
+  {
+    id: "aracatuba",
     name: "Cine Araújo Multiplex Praça Nova Araçatuba",
+    source: { kind: "ingresso", cityId: "83", theaterId: "1645" },
   },
 ];
 
@@ -27,6 +42,8 @@ export const THEATERS: TheaterConfig[] = [
 export interface TheaterSessions {
   theater: TheaterConfig;
   movies: SubtitledMovie[];
+  /** Preenchido quando não foi possível consultar o cinema */
+  error?: string;
 }
 
 export function buildSessionsUrl(
@@ -129,14 +146,35 @@ export async function fetchSessions(
   return (await response.json()) as SessionsResponse;
 }
 
-/** Busca as sessões legendadas de vários cinemas em paralelo */
+/** Busca as sessões legendadas de um cinema, despachando pela fonte */
+export async function fetchTheater(
+  theater: TheaterConfig,
+): Promise<TheaterSessions> {
+  if (theater.source.kind === "grupocine") {
+    const html = await fetchGrupocineHtml(theater.source.programacaoUrl);
+    return { theater, movies: extractSubtitledMoviesGrupocine(html) };
+  }
+  const sessions = await fetchSessions(
+    theater.source.cityId,
+    theater.source.theaterId,
+  );
+  return { theater, movies: extractSubtitledMovies(sessions) };
+}
+
+/** Busca as sessões legendadas de vários cinemas em paralelo; um cinema
+ * que falhar não derruba os demais */
 export async function fetchAllTheaters(
   theaters: TheaterConfig[],
 ): Promise<TheaterSessions[]> {
   return Promise.all(
     theaters.map(async (theater) => {
-      const sessions = await fetchSessions(theater.cityId, theater.theaterId);
-      return { theater, movies: extractSubtitledMovies(sessions) };
+      try {
+        return await fetchTheater(theater);
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Erro inesperado";
+        return { theater, movies: [], error: message };
+      }
     }),
   );
 }

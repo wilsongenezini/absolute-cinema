@@ -11,14 +11,18 @@ const args = process.argv.slice(2);
 const wantsJson = args.includes("--json");
 const wantsDebug = args.includes("--debug");
 
-/** Env vars permitem focar em um cinema específico, como antes */
+/** Env vars permitem focar em um cinema da API do ingresso, como antes */
 const theaters: TheaterConfig[] =
   process.env.INGRESSO_CITY_ID && process.env.INGRESSO_THEATER_ID
     ? [
         {
-          cityId: process.env.INGRESSO_CITY_ID,
-          theaterId: process.env.INGRESSO_THEATER_ID,
+          id: "personalizado",
           name: "Cinema personalizado (env)",
+          source: {
+            kind: "ingresso",
+            cityId: process.env.INGRESSO_CITY_ID,
+            theaterId: process.env.INGRESSO_THEATER_ID,
+          },
         },
       ]
     : THEATERS;
@@ -36,8 +40,11 @@ if (wantsJson) {
   process.exit(0);
 }
 
-if (allMovies.length === 0) {
+if (totalSubtitledSessions === 0) {
   console.log("Nenhuma sessão legendada encontrada nos cinemas monitorados. 🍿");
+  for (const group of groups) {
+    if (group.error) console.log(`⚠️  ${group.theater.name}: ${group.error}`);
+  }
   process.exit(0);
 }
 
@@ -48,6 +55,10 @@ console.log(
 
 for (const group of groups) {
   console.log(`🎥 ${group.theater.name}`);
+  if (group.error) {
+    console.log(`   ⚠️  Não foi possível consultar: ${group.error}\n`);
+    continue;
+  }
   if (group.movies.length === 0) {
     console.log("   Nenhuma sessão legendada hoje neste cinema.\n");
     continue;
@@ -69,7 +80,8 @@ for (const group of groups) {
 if (wantsDebug) {
   for (let i = 0; i < theaters.length; i++) {
     const theater = theaters[i]!;
-    const raw = await fetchSessions(theater.cityId, theater.theaterId);
+    if (theater.source.kind !== "ingresso") continue; // debug só para fonte API
+    const raw = await fetchSessions(theater.source.cityId, theater.source.theaterId);
     let totalMovies = 0;
     let totalSessions = 0;
     let legendadas = 0;

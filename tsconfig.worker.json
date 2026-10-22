@@ -4,6 +4,6 @@
     "types": ["@cloudflare/workers-types"],
     "noEmit": true
   },
-  "include": ["src/worker.ts", "src/ingresso.ts", "src/types.ts"],
+  "include": ["src/worker.ts", "src/ingresso.ts", "src/grupocine.ts", "src/types.ts"],
   "exclude": []
 }

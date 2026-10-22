@@ -111,6 +111,14 @@ async function fetchSubtitledMovies() {
       theaterHeading.textContent = group.theater.name;
       fragment.append(theaterHeading);
 
+      if (group.error) {
+        const warn = document.createElement("p");
+        warn.className = "status error";
+        warn.textContent = `Não foi possível consultar: ${group.error}`;
+        fragment.append(warn);
+        continue;
+      }
+
       if (group.movies.length === 0) {
         const empty = document.createElement("p");
         empty.className = "status";
