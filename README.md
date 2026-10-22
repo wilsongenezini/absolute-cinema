@@ -70,6 +70,8 @@ A rota `/api/sessions` funciona como proxy com CORS restritivo e cache de 60 s n
 3. (Opcional) No dashboard do Cloudflare, defina a variável `ALLOWED_ORIGIN` no Worker com seu domínio final para reforçar o CORS
 4. (Opcional) Conecte o repositório GitHub a uma Worker para deploy automático a cada `git push`
 
+A Worker se chama `tres-lagoas`; a URL final fica em `https://tres-lagoas.<subdomínio-da-conta>.workers.dev`.
+
 ### Estrutura
 
 ```

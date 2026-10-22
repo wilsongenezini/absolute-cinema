@@ -2,7 +2,7 @@
 // Front-end estático em web/ + worker (backend) responsável por /api/*
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "absolute-cinema",
+  "name": "tres-lagoas",
   "main": "src/worker.ts",
   "compatibility_date": "2026-10-22",
   "observability": {
