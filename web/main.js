@@ -6,7 +6,6 @@ const subtitle = document.getElementById("subtitle");
 const results = document.getElementById("results");
 
 function setStatus(message, isError = false) {
-  results.replaceChildren();
   const status = document.createElement("p");
   status.className = isError ? "status error" : "status";
   status.textContent = message;
@@ -47,8 +46,7 @@ function movieCard(movie) {
     room.className = "room";
     room.textContent = `— ${session.room}${session.price ? ` — R$ ${session.price.toFixed(2).replace(".", ",")}` : ""}`;
 
-    const ended = new Date(session.fullDate) <= now;
-    if (ended) item.classList.add("ended");
+    if (new Date(session.fullDate) <= now) item.classList.add("ended");
 
     item.append(time, room);
     if (session.siteURL) {
@@ -88,19 +86,45 @@ async function fetchSubtitledMovies() {
       throw new Error("Resposta de formato inesperado.");
     }
 
-    if (data.length === 0) {
-      setStatus("Nenhuma sessão legendada hoje neste cinema. 🍿");
+    const totalSessions = data.reduce(
+      (sum, group) =>
+        sum +
+        group.movies.reduce((s, movie) => s + movie.sessions.length, 0),
+      0,
+    );
+    const totalMovies = data.reduce(
+      (sum, group) => sum + group.movies.length,
+      0,
+    );
+
+    if (totalSessions === 0) {
+      setStatus("Nenhuma sessão legendada hoje nestes cinemas. 🍿");
       return;
     }
 
-    subtitle.textContent = `${data.reduce((s, m) => s + m.sessions.length, 0)} sessões legendadas em ${data.length} filme${data.length === 1 ? "" : "s"}`;
+    subtitle.textContent = `${totalSessions} sessões legendadas em ${totalMovies} filme${totalMovies === 1 ? "" : "s"}`;
 
     const fragment = document.createDocumentFragment();
-    const label = labeled("Legendado");
-    for (const movie of data) {
-      const card = movieCard(movie);
-      card.querySelector("h2").prepend(label.cloneNode(true), " ");
-      fragment.append(card);
+    for (const group of data) {
+      const theaterHeading = document.createElement("h2");
+      theaterHeading.className = "theater";
+      theaterHeading.textContent = group.theater.name;
+      fragment.append(theaterHeading);
+
+      if (group.movies.length === 0) {
+        const empty = document.createElement("p");
+        empty.className = "status";
+        empty.textContent = "Nenhuma sessão legendada hoje neste cinema.";
+        fragment.append(empty);
+        continue;
+      }
+
+      const label = labeled("Legendado");
+      for (const movie of group.movies) {
+        const card = movieCard(movie);
+        card.querySelector("h2").prepend(label.cloneNode(true), " ");
+        fragment.append(card);
+      }
     }
     results.replaceChildren(fragment);
   } catch (error) {

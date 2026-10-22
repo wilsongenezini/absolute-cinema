@@ -1,11 +1,6 @@
 /// <reference types="@cloudflare/workers-types" />
 
-import {
-  DEFAULT_CITY_ID,
-  DEFAULT_THEATER_ID,
-  extractSubtitledMovies,
-  fetchSessions,
-} from "./ingresso.js";
+import { THEATERS, fetchAllTheaters } from "./ingresso.js";
 
 /** Tempo, em segundos, da resposta em cache no edge do Cloudflare */
 const CACHE_TTL_SECONDS = 60;
@@ -75,12 +70,8 @@ export default {
 
     try {
       ctx.passThroughOnException();
-      const sessions = await fetchSessions(
-        DEFAULT_CITY_ID,
-        DEFAULT_THEATER_ID,
-      );
-      const subtitled = extractSubtitledMovies(sessions);
-      const response = json(subtitled, 200, corsHeaders);
+      const groups = await fetchAllTheaters(THEATERS);
+      const response = json(groups, 200, corsHeaders);
       ctx.waitUntil(cache.put(request, response.clone()));
       return response;
     } catch (error) {

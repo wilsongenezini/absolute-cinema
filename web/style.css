@@ -128,6 +128,23 @@ body {
   gap: 0.35rem;
 }
 
+.theater {
+  width: 100%;
+  margin-top: 1.4rem;
+  text-align: left;
+  font-family: "Bebas Neue", Impact, system-ui, sans-serif;
+  font-weight: 400;
+  font-size: 1.7rem;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.5rem;
+}
+
+.stage > .theater:first-child {
+  margin-top: 0;
+}
+
 .session {
   display: flex;
   flex-wrap: wrap;

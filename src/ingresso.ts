@@ -7,6 +7,28 @@ import type {
 export const DEFAULT_CITY_ID = "473";
 export const DEFAULT_THEATER_ID = "1537";
 
+/** Cinemas monitorados pelo site/CLI */
+export interface TheaterConfig {
+  cityId: string;
+  theaterId: string;
+  name: string;
+}
+
+export const THEATERS: TheaterConfig[] = [
+  { cityId: "473", theaterId: "1537", name: "Cinépolis Shopping Três Lagoas" },
+  {
+    cityId: "83",
+    theaterId: "1645",
+    name: "Cine Araújo Multiplex Praça Nova Araçatuba",
+  },
+];
+
+/** Sessões legendadas de um cinema */
+export interface TheaterSessions {
+  theater: TheaterConfig;
+  movies: SubtitledMovie[];
+}
+
 export function buildSessionsUrl(
   cityId: string,
   theaterId: string,
@@ -105,4 +127,16 @@ export async function fetchSessions(
   }
 
   return (await response.json()) as SessionsResponse;
+}
+
+/** Busca as sessões legendadas de vários cinemas em paralelo */
+export async function fetchAllTheaters(
+  theaters: TheaterConfig[],
+): Promise<TheaterSessions[]> {
+  return Promise.all(
+    theaters.map(async (theater) => {
+      const sessions = await fetchSessions(theater.cityId, theater.theaterId);
+      return { theater, movies: extractSubtitledMovies(sessions) };
+    }),
+  );
 }
