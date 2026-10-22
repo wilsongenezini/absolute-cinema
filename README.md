@@ -1,5 +1,9 @@
 # absolute-cinema 🎬
 
+Filmes com sessão legendada nos cinemas monitorados, direto da API do ingresso.com.
+
+> Deploy: GitHub → Cloudflare (Workers Builds, automático a cada push em `main`).
+
 Lista **todos os filmes com sessão legendada** do cinema (cidade **473** — Três Lagoas, cinema **1537** — CinépolisShopping Três Lagoas) usando a API do ingresso.com:
 
 ```
