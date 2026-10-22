@@ -1,0 +1,182 @@
+:root {
+  color-scheme: dark;
+  --bg: radial-gradient(circle at 50% 0%, #1f1285 0%, #0a0620 55%, #05030f 100%);
+  --card: rgba(255, 255, 255, 0.06);
+  --border: rgba(255, 255, 255, 0.14);
+  --text: #f2ecff;
+  --muted: #a29bbd;
+  --accent: #f8c13a;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+}
+
+body {
+  min-height: 100vh;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg) fixed;
+  color: var(--text);
+  display: grid;
+  place-items: center;
+  padding: 2rem 1rem 6rem;
+}
+
+.stage {
+  width: min(46rem, 100%);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.4rem;
+}
+
+.title {
+  margin-top: clamp(1rem, 18vh, 6rem);
+  font-size: clamp(2.2rem, 6vw, 3.6rem);
+  letter-spacing: 0.02em;
+}
+
+.subtitle {
+  color: var(--muted);
+  font-size: 1.05rem;
+}
+
+.cinema-btn {
+  margin-block: 0.5rem;
+  padding: 1rem 2.6rem;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #201500;
+  background: linear-gradient(140deg, hsl(41 92% 60%), hsl(26 92% 58%));
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  box-shadow: 0 10px 35px -10px hsl(41 92% 60% / 0.65);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.cinema-btn:hover:not(:disabled) {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 16px 40px -10px hsl(41 92% 60% / 0.75);
+}
+
+.cinema-btn:active:not(:disabled) {
+  transform: translateY(0) scale(0.98);
+}
+
+.cinema-btn:disabled {
+  opacity: 0.66;
+  cursor: progress;
+}
+
+.results {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.status {
+  color: var(--muted);
+  padding: 1rem 0;
+}
+
+.status.error {
+  color: #ff8b8b;
+}
+
+.movie-card {
+  width: 100%;
+  text-align: left;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  padding: 1.1rem 1.3rem;
+}
+
+.movie-card h2 {
+  font-size: 1.2rem;
+}
+
+.movie-card .original {
+  color: var(--muted);
+  font-weight: 400;
+  font-size: 0.95rem;
+  margin-left: 0.4rem;
+}
+
+.movie-card .info {
+  display: block;
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin-top: 0.2rem;
+}
+
+.movie-card ul {
+  list-style: none;
+  padding: 0;
+  margin-top: 0.7rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.session {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: baseline;
+  font-size: 1rem;
+}
+
+.session .room {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.session.ended {
+  opacity: 0.55;
+}
+
+.badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #0b0812;
+  background: var(--accent);
+  border-radius: 4px;
+  padding: 0.15rem 0.45rem;
+}
+
+.footer {
+  position: fixed;
+  bottom: 1.1rem;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  gap: 1.2rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+a {
+  color: var(--muted);
+}
+
+a:hover,
+.link-btn:hover {
+  color: var(--text);
+}
+
+.link-btn {
+  background: none;
+  border: 0;
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline dotted;
+}

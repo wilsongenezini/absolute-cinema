@@ -1,12 +1,14 @@
 import {
-  CITY_ID,
-  THEATER_ID,
+  DEFAULT_CITY_ID,
+  DEFAULT_THEATER_ID,
   extractSubtitledMovies,
   fetchSessions,
   isEnabled,
   isSubtitled,
 } from "./ingresso.js";
 
+const CITY_ID = process.env.INGRESSO_CITY_ID ?? DEFAULT_CITY_ID;
+const THEATER_ID = process.env.INGRESSO_THEATER_ID ?? DEFAULT_THEATER_ID;
 const args = process.argv.slice(2);
 const wantsJson = args.includes("--json");
 const wantsDebug = args.includes("--debug");
@@ -47,6 +49,7 @@ for (const movie of subtitled) {
       `   🗓️  ${session.dayAndMonth} (${session.dayOfWeek}) às ${session.time} — ${session.room}${price}`,
     );
   }
+  console.log('\n');
 }
 
 if (wantsDebug) {

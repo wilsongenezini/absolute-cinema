@@ -7,9 +7,6 @@ import type {
 export const DEFAULT_CITY_ID = "473";
 export const DEFAULT_THEATER_ID = "1537";
 
-export const CITY_ID = process.env.INGRESSO_CITY_ID ?? DEFAULT_CITY_ID;
-export const THEATER_ID = process.env.INGRESSO_THEATER_ID ?? DEFAULT_THEATER_ID;
-
 export function buildSessionsUrl(
   cityId: string,
   theaterId: string,

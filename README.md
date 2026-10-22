@@ -13,6 +13,7 @@ Toda vez que um comando de script é executado, a rota é consultada **ao vivo**
 - Node.js (fetch nativo)
 - TypeScript 7 (compilador nativo — versão mais recente)
 - tsx (executa TypeScript direto, versão mais recente)
+- Wrangler 4 + Cloudflare Workers (site/hospedagem — versão mais recente)
 
 ## Uso
 
@@ -22,7 +23,10 @@ npm start            # lista os filmes com sessão legendada (nome, data e horá
 npm run sessions     # idem
 npm run legendado    # idem
 npm run dev          # modo watch, refaz a requisição a cada execução
-npm run build        # compila para dist/ (não consulta a API)
+npm run build        # compila a CLI para dist/ (não consulta a API)
+npm run dev:web      # site completo local: front + API em http://localhost:8787
+npm run deploy       # publica o site no Cloudflare
+npm run check        # valida os tipos da CLI e do Worker
 ```
 
 ### Opções
@@ -48,15 +52,41 @@ INGRESSO_CITY_ID=<id> INGRESSO_THEATER_ID=<id> npm start
    🗓️  22/10 (quinta-feira) às 22:40 — Sala 3 — R$ 45,60
 ```
 
-## Estrutura
+## Site (front + Cloudflare Worker)
+
+O repositório também contém uma versão web do comando: uma página com um único botão que, ao clicar, consulta `/api/sessions` (o Worker) e lista os filmes legendados com data e horário.
+
+```bash
+npm run dev:web   # sobe front + Worker localmente em http://localhost:8787
+npm run deploy    # verifica tipos e publica no Cloudflare (Workers + Assets)
+```
+
+A rota `/api/sessions` funciona como proxy com CORS restritivo e cache de 60 s no edge — a API do ingresso.com não permite chamadas diretas do navegador (sem CORS), por isso o Worker é necessário.
+
+### Publicação (passos manuais)
+
+1. `npx wrangler login` — autentica sua conta Cloudflare pelo navegador
+2. `npm run deploy` — publica; o CLI imprime a URL final (`*.workers.dev`)
+3. (Opcional) No dashboard do Cloudflare, defina a variável `ALLOWED_ORIGIN` no Worker com seu domínio final para reforçar o CORS
+4. (Opcional) Conecte o repositório GitHub a uma Worker para deploy automático a cada `git push`
+
+### Estrutura
 
 ```
 absolute-cinema/
 ├── package.json
-├── tsconfig.json
+├── tsconfig.json           # CLI (tipos Node)
+├── tsconfig.worker.json    # Worker (tipos Cloudflare)
+├── wrangler.jsonc          # front estático + worker na rota /api/*
 ├── .gitignore
-└── src/
-    ├── index.ts      # CLI: formata e imprime as sessões legendadas
-    ├── ingresso.ts   # cliente da API + extração das sessões legendadas
-    └── types.ts      # tipos da resposta da API do ingresso.com
+├── src/
+│   ├── index.ts            # CLI: imprime as sessões legendadas
+│   ├── worker.ts           # backend do site: proxy + cache + CORS
+│   ├── ingresso.ts         # cliente da API (usado pela CLI e pelo site)
+│   └── types.ts            # tipos da resposta da API do ingresso.com
+└── web/                    # front-end (HTML/CSS/JS puro)
+    ├── index.html
+    ├── style.css
+    └── main.js
 ```
+

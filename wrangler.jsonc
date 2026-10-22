@@ -1,0 +1,21 @@
+// Configuração Cloudflare Wrangler v4+
+// Front-end estático em web/ + worker (backend) responsável por /api/*
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "absolute-cinema",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-10-22",
+  "observability": {
+    "enabled": true
+  },
+  "assets": {
+    "directory": "./web",
+    // O worker intercepta /api/*; tudo o mais é servido como estático
+    "run_worker_first": ["/api/*"]
+  },
+  "vars": {
+    // Restrinja após o primeiro deploy, ex.:
+    // "ALLOWED_ORIGIN": "https://absolute-cinema.<subconta>.workers.dev"
+    "ALLOWED_ORIGIN": ""
+  }
+}
