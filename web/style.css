@@ -34,8 +34,13 @@ body {
 
 .title {
   margin-top: clamp(1rem, 18vh, 6rem);
-  font-size: clamp(2.2rem, 6vw, 3.6rem);
-  letter-spacing: 0.02em;
+  font-family: "Bebas Neue", "Oswald", Impact, system-ui, sans-serif;
+  font-weight: 400;
+  font-size: clamp(3rem, 9vw, 5.4rem);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  line-height: 1.1;
+  text-shadow: 0 4px 30px hsl(41 92% 60% / 0.25);
 }
 
 .subtitle {
@@ -161,22 +166,4 @@ body {
   gap: 1.2rem;
   font-size: 0.85rem;
   color: var(--muted);
-}
-
-a {
-  color: var(--muted);
-}
-
-a:hover,
-.link-btn:hover {
-  color: var(--text);
-}
-
-.link-btn {
-  background: none;
-  border: 0;
-  color: var(--muted);
-  font: inherit;
-  cursor: pointer;
-  text-decoration: underline dotted;
 }

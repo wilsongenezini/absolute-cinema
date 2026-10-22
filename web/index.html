@@ -6,22 +6,23 @@
     <title>Absolute Cinema 🎬</title>
     <meta name="description" content="Filmes com sessão legendada no Cinépolis Três Lagoas" />
     <link rel="icon" href="data:🎬" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="./style.css" />
   </head>
   <body>
     <main class="stage">
-      <h1 class="title">🎬 Absolute Cinema</h1>
+      <h1 class="title">Absolute Cinema</h1>
       <p class="subtitle" id="subtitle">Sessões legendadas de hoje em diante</p>
       <button id="fetch-btn" type="button" class="cinema-btn">
         Ver filmes legendados
       </button>
       <section id="results" class="results" aria-live="polite"></section>
-      <footer class="footer">
-        <a href="https://www.ingresso.com" target="_blank" rel="noopener noreferrer"
-          >Dados via ingresso.com</a
-        >
-        <button id="json-btn" type="button" class="link-btn">ver JSON</button>
-      </footer>
+      <footer class="footer">Criado por Wilson Genezini</footer>
     </main>
     <script type="module" src="./main.js"></script>
   </body>

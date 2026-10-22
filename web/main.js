@@ -2,7 +2,6 @@
  * API externa, então nada dela pode virar código executado no navegador. */
 
 const btn = document.getElementById("fetch-btn");
-const jsonBtn = document.getElementById("json-btn");
 const subtitle = document.getElementById("subtitle");
 const results = document.getElementById("results");
 
@@ -115,26 +114,4 @@ async function fetchSubtitledMovies() {
   }
 }
 
-async function showRawJsonInConsole() {
-  try {
-    const response = await fetch("/api/sessions");
-    const data = await response.json();
-    console.log("%cabsolute-cinema // sessões legendadas", "font-weight:bold");
-    console.table(
-      data.flatMap((movie) =>
-        movie.sessions.map((session) => ({
-          filme: movie.title,
-          data: session.dayAndMonth,
-          horario: session.time,
-          sala: session.room,
-        })),
-      ),
-    );
-    setStatus("JSON no console (F12).");
-  } catch (error) {
-    setStatus("Não consegui montar o JSON no console.", true);
-  }
-}
-
 btn.addEventListener("click", fetchSubtitledMovies);
-jsonBtn.addEventListener("click", showRawJsonInConsole);
