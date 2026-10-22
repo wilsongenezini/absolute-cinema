@@ -122,7 +122,7 @@ async function fetchSubtitledMovies() {
       if (group.movies.length === 0) {
         const empty = document.createElement("p");
         empty.className = "status";
-        empty.textContent = "Nenhuma sessão legendada hoje neste cinema.";
+        empty.textContent = "Nenhuma sessão legendada neste cinema.";
         fragment.append(empty);
         continue;
       }

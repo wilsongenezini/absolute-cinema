@@ -60,7 +60,7 @@ for (const group of groups) {
     continue;
   }
   if (group.movies.length === 0) {
-    console.log("   Nenhuma sessão legendada hoje neste cinema.\n");
+    console.log("   Nenhuma sessão legendada neste cinema.\n");
     continue;
   }
   for (const movie of group.movies) {
