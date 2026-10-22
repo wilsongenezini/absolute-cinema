@@ -47,7 +47,6 @@ for (const movie of subtitled) {
       `   🗓️  ${session.dayAndMonth} (${session.dayOfWeek}) às ${session.time} — ${session.room}${price}`,
     );
   }
-  console.log("   ✨ Absolute Cinema!\n");
 }
 
 if (wantsDebug) {
