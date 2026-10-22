@@ -1,0 +1,33 @@
+{
+  "name": "absolute-cinema",
+  "version": "1.0.0",
+  "description": "Lista todos os filmes com sessão legendada do Cinema Milenium (cidade 473, cinema 1537) via API do Ingresso.com",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "sessions": "tsx src/index.ts",
+    "legendado": "tsx src/index.ts",
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "prepack": "npm run build"
+  },
+  "keywords": [
+    "cinema",
+    "ingresso",
+    "legendado",
+    "sessions"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true
+  }
+}
