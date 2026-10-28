@@ -2,6 +2,7 @@
 
 const sessionsButton = document.getElementById("fetch-btn");
 const historyButton = document.getElementById("history-btn");
+const historyNote = document.getElementById("history-note");
 const buttons = [sessionsButton, historyButton];
 const subtitle = document.getElementById("subtitle");
 const results = document.getElementById("results");
@@ -61,7 +62,8 @@ function movieCard(movie, historical = false) {
     if (new Date(session.fullDate) <= now) item.classList.add("ended");
 
     item.append(time, room);
-    if (session.siteURL && !historical) {
+    const isFutureSession = new Date(session.fullDate) > now;
+    if (session.siteURL && (!historical || isFutureSession)) {
       const link = document.createElement("a");
       link.textContent = "comprar";
       link.href = session.siteURL;
@@ -142,7 +144,7 @@ function renderHistory(periods) {
 
   subtitle.textContent = "Retrospecto do Cinépolis Shopping Três Lagoas";
   if (totalSessions === 0) {
-    setStatus("Ainda não há sessões legendadas anteriores registradas. 🍿");
+    setStatus("Ainda não há sessões legendadas registradas. 🍿");
     return;
   }
 
@@ -195,22 +197,24 @@ async function load(path, button, loadingText, statusText, render) {
   }
 }
 
-sessionsButton.addEventListener("click", () =>
+sessionsButton.addEventListener("click", () => {
+  historyNote.hidden = true;
   load(
     "/api/sessions",
     sessionsButton,
     "Carregando…",
     "Buscando as sessões legendadas dos cinemas monitorados…",
     renderSessions,
-  ),
-);
+  );
+});
 
-historyButton.addEventListener("click", () =>
+historyButton.addEventListener("click", () => {
+  historyNote.hidden = false;
   load(
     "/api/history",
     historyButton,
     "Carregando…",
     "Consultando o histórico de Três Lagoas…",
     renderHistory,
-  ),
-);
+  );
+});

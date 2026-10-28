@@ -62,9 +62,9 @@ INGRESSO_CITY_ID=<id> INGRESSO_THEATER_ID=<id> npm start
 O site oferece dois botões:
 
 - **Ver filmes legendados** consulta `/api/sessions` e mantém a programação ao vivo dos cinemas configurados.
-- **Ver retrospecto** consulta `/api/history` e exibe sessões legendadas já ocorridas no Cinépolis Shopping Três Lagoas, agrupadas por mês.
+- **Ver retrospecto** consulta `/api/history` e exibe sessões legendadas registradas no Cinépolis Shopping Três Lagoas, agrupadas por mês.
 
-A mensagem na página informa que o histórico começa em **28 de outubro de 2026**. O Worker registra a programação de Três Lagoas ao consultar a programação ao vivo e também por uma coleta agendada diária (06:00 no horário local). A coleta agendada acessa somente esse cinema.
+A mensagem abaixo do botão **Ver retrospecto** informa que o histórico começa em **28 de outubro de 2026**; ela aparece após clicar no botão. O Worker registra a programação de Três Lagoas ao consultar a programação ao vivo e também por uma coleta agendada diária ao meio-dia (12:00 no horário local). A coleta agendada acessa somente esse cinema.
 
 ### Banco de dados (Cloudflare D1)
 

@@ -118,10 +118,9 @@ export async function recordTheaterHistory(
   }
 }
 
-/** Returns completed Três Lagoas sessions grouped by their local month. */
+/** Returns recorded Três Lagoas sessions grouped by their local month. */
 export async function readHistory(
   db: D1Database,
-  now = new Date(),
 ): Promise<HistoryPeriod[]> {
   const { results } = await db
     .prepare(
@@ -142,10 +141,9 @@ export async function readHistory(
       FROM history_sessions AS s
       INNER JOIN history_movies AS m ON m.id = s.movie_id
       WHERE datetime(s.full_date) >= datetime(?)
-        AND datetime(s.full_date) <= datetime(?)
       ORDER BY datetime(s.full_date) DESC, m.title COLLATE NOCASE ASC`,
     )
-    .bind(HISTORY_START_AT, now.toISOString())
+    .bind(HISTORY_START_AT)
     .all<HistoryRow>();
 
   const periods = new Map<

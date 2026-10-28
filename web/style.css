@@ -48,17 +48,25 @@ body {
   font-size: 1.05rem;
 }
 
-.history-note {
-  color: var(--muted);
-  font-size: 0.88rem;
-  margin-top: -0.9rem;
-}
-
 .actions {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
+  align-items: flex-start;
   gap: 0.8rem;
+}
+
+.history-action {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.history-note {
+  max-width: 23rem;
+  margin: 0;
+  text-align: center;
 }
 
 .cinema-btn {

@@ -6,8 +6,8 @@
   "main": "src/worker.ts",
   "compatibility_date": "2026-10-22",
   "triggers": {
-    // 06:00 no horário de Três Lagoas (UTC-3).
-    "crons": ["0 9 * * *"]
+    // 12:00 no horário de Três Lagoas (UTC-3).
+    "crons": ["0 15 * * *"]
   },
   "d1_databases": [
     {
