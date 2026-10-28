@@ -48,19 +48,19 @@ body {
   font-size: 1.05rem;
 }
 
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  align-items: flex-start;
-  gap: 0.8rem;
-}
-
-.history-action {
+.button-area {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0.6rem;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 0.8rem;
 }
 
 .history-note {

@@ -21,7 +21,7 @@ function labeled(text) {
   return label;
 }
 
-function movieCard(movie, historical = false) {
+function movieCard(movie) {
   const card = document.createElement("article");
   card.className = "movie-card";
 
@@ -53,25 +53,12 @@ function movieCard(movie, historical = false) {
     time.textContent = `${session.dayAndMonth} (${session.dayOfWeek}) às ${session.time}`;
 
     const room = document.createElement("span");
-    const price = session.price
-      ? ` — R$ ${session.price.toFixed(2).replace(".", ",")}`
-      : "";
     room.className = "room";
-    room.textContent = `— ${session.room}${price}`;
+    room.textContent = `— ${session.room}`;
 
     if (new Date(session.fullDate) <= now) item.classList.add("ended");
 
     item.append(time, room);
-    const isFutureSession = new Date(session.fullDate) > now;
-    if (session.siteURL && (!historical || isFutureSession)) {
-      const link = document.createElement("a");
-      link.textContent = "comprar";
-      link.href = session.siteURL;
-      link.target = "_blank";
-      link.rel = "noopener noreferrer";
-      item.append(link);
-    }
-
     list.append(item);
   }
   card.append(list);
@@ -160,7 +147,7 @@ function renderHistory(periods) {
     monthHeading.textContent = monthLabel(period.month);
     fragment.append(monthHeading);
 
-    for (const movie of period.movies) fragment.append(movieCard(movie, true));
+    for (const movie of period.movies) fragment.append(movieCard(movie));
   }
 
   results.replaceChildren(fragment);
