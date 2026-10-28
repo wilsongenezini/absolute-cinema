@@ -1,7 +1,7 @@
 {
   "name": "absolute-cinema",
   "version": "1.0.0",
-  "description": "Lista todos os filmes com sessão legendada do Cinema Milenium (cidade 473, cinema 1537) via API do Ingresso.com",
+  "description": "Lista sessões legendadas dos cinemas monitorados e mantém o histórico de Três Lagoas",
   "type": "module",
   "engines": {
     "node": ">=22"
@@ -14,6 +14,8 @@
     "build": "tsc",
     "check": "tsc && tsc -p tsconfig.worker.json",
     "dev:web": "wrangler dev",
+    "db:migrate:local": "wrangler d1 migrations apply absolute-cinema-history --local",
+    "db:migrate:remote": "wrangler d1 migrations apply absolute-cinema-history --remote",
     "deploy": "npm run check && wrangler deploy",
     "prepack": "npm run build"
   },

@@ -5,6 +5,19 @@
   "name": "tres-lagoas",
   "main": "src/worker.ts",
   "compatibility_date": "2026-10-22",
+  "triggers": {
+    // 06:00 no horário de Três Lagoas (UTC-3).
+    "crons": ["0 9 * * *"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "absolute-cinema-history",
+      // Substitua pelo UUID retornado por `wrangler d1 create` antes do deploy.
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ],
   "observability": {
     "enabled": true
   },

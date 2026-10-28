@@ -17,10 +17,18 @@
   <body>
     <main class="stage">
       <h1 class="title">Absolute Cinema</h1>
-      <p class="subtitle" id="subtitle">Sessões legendadas de hoje em diante</p>
-      <button id="fetch-btn" type="button" class="cinema-btn">
-        Ver filmes legendados
-      </button>
+      <p class="subtitle" id="subtitle">Sessões legendadas dos cinemas monitorados</p>
+      <p class="history-note">
+        Histórico de sessões legendadas a partir do dia 28 de outubro de 2026
+      </p>
+      <div class="actions">
+        <button id="fetch-btn" type="button" class="cinema-btn">
+          Ver filmes legendados
+        </button>
+        <button id="history-btn" type="button" class="cinema-btn secondary">
+          Ver retrospecto
+        </button>
+      </div>
       <section id="results" class="results" aria-live="polite"></section>
       <footer class="footer">Criado por Wilson Genezini</footer>
     </main>

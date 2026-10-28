@@ -1,16 +1,16 @@
 # absolute-cinema 🎬
 
-Filmes com sessão legendada nos cinemas monitorados, direto da API do ingresso.com.
+Filmes com sessão legendada nos cinemas monitorados, com programação ao vivo e retrospecto de Três Lagoas.
 
 > Deploy: GitHub → Cloudflare (Workers Builds, automático a cada push em `main`).
 
-Lista **todos os filmes com sessão legendada** do cinema (cidade **473** — Três Lagoas, cinema **1537** — CinépolisShopping Três Lagoas) usando a API do ingresso.com:
+O projeto consulta os cinemas configurados em `src/ingresso.ts`. A programação de Três Lagoas vem da API do ingresso.com (cidade **473**, cinema **1537** — Cinépolis Shopping Três Lagoas):
 
 ```
 https://api-content.ingresso.com/v0/sessions/city/473/theater/1537/partnership/home/groupBy/sessionType
 ```
 
-Toda vez que um comando de script é executado, a rota é consultada **ao vivo** (sem cache), sempre devolvendo os dados mais recentes — nome do filme, data e horário de cada sessão legendada.
+As sessões exibidas são legendadas e habilitadas. O retrospecto grava somente as sessões do Cinépolis Shopping Três Lagoas; os demais cinemas continuam aparecendo apenas na consulta ao vivo.
 
 ## Stack
 
@@ -29,6 +29,7 @@ npm run legendado    # idem
 npm run dev          # modo watch, refaz a requisição a cada execução
 npm run build        # compila a CLI para dist/ (não consulta a API)
 npm run dev:web      # site completo local: front + API em http://localhost:8787
+npm run db:migrate:local  # cria as tabelas do histórico no D1 local
 npm run deploy       # publica o site no Cloudflare
 npm run check        # valida os tipos da CLI e do Worker
 ```
@@ -58,14 +59,38 @@ INGRESSO_CITY_ID=<id> INGRESSO_THEATER_ID=<id> npm start
 
 ## Site (front + Cloudflare Worker)
 
-O repositório também contém uma versão web do comando: uma página com um único botão que, ao clicar, consulta `/api/sessions` (o Worker) e lista os filmes legendados com data e horário.
+O site oferece dois botões:
+
+- **Ver filmes legendados** consulta `/api/sessions` e mantém a programação ao vivo dos cinemas configurados.
+- **Ver retrospecto** consulta `/api/history` e exibe sessões legendadas já ocorridas no Cinépolis Shopping Três Lagoas, agrupadas por mês.
+
+A mensagem na página informa que o histórico começa em **28 de outubro de 2026**. O Worker registra a programação de Três Lagoas ao consultar a programação ao vivo e também por uma coleta agendada diária (06:00 no horário local). A coleta agendada acessa somente esse cinema.
+
+### Banco de dados (Cloudflare D1)
+
+Crie o banco na sua conta Cloudflare e copie o UUID retornado para `database_id` em `wrangler.jsonc`, substituindo o UUID zerado de exemplo:
 
 ```bash
-npm run dev:web   # sobe front + Worker localmente em http://localhost:8787
-npm run deploy    # verifica tipos e publica no Cloudflare (Workers + Assets)
+npx wrangler d1 create absolute-cinema-history
 ```
 
-A rota `/api/sessions` funciona como proxy com CORS restritivo e cache de 60 s no edge — a API do ingresso.com não permite chamadas diretas do navegador (sem CORS), por isso o Worker é necessário.
+Para preparar o banco local e iniciar o site:
+
+```bash
+npm run db:migrate:local
+npm run dev:web
+```
+
+Antes de publicar, aplique a migração remota e faça o deploy:
+
+```bash
+npm run db:migrate:remote
+npm run deploy
+```
+
+O histórico é acumulado a partir da implantação/coleta: a API de programação não fornece um arquivo completo de sessões antigas. Ele registra sessões anunciadas pela programação, não confirma que uma sessão ocorreu de fato.
+
+A rota `/api/sessions` funciona como proxy com CORS restritivo e cache de 60 s no edge — a API do ingresso.com não permite chamadas diretas do navegador (sem CORS), por isso o Worker é necessário. `/api/history` consulta o D1 e não é armazenada em cache.
 
 ### Publicação (passos manuais)
 
@@ -87,12 +112,13 @@ absolute-cinema/
 ├── .gitignore
 ├── src/
 │   ├── index.ts            # CLI: imprime as sessões legendadas
-│   ├── worker.ts           # backend do site: proxy + cache + CORS
+│   ├── worker.ts           # backend: proxy, histórico, agendamento, cache e CORS
+│   ├── history.ts          # persistência e consulta do histórico de Três Lagoas
 │   ├── ingresso.ts         # cliente da API (usado pela CLI e pelo site)
 │   └── types.ts            # tipos da resposta da API do ingresso.com
+├── migrations/             # migrações do banco D1
 └── web/                    # front-end (HTML/CSS/JS puro)
     ├── index.html
     ├── style.css
     └── main.js
 ```
-
