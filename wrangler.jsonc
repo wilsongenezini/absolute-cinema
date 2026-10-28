@@ -13,8 +13,7 @@
     {
       "binding": "DB",
       "database_name": "absolute-cinema-history",
-      // Substitua pelo UUID retornado por `wrangler d1 create` antes do deploy.
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "8a813507-45ce-4fb1-83cb-87b20ccb6d83",
       "migrations_dir": "migrations"
     }
   ],

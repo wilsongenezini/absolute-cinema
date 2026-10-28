@@ -68,7 +68,7 @@ A mensagem na página informa que o histórico começa em **28 de outubro de 202
 
 ### Banco de dados (Cloudflare D1)
 
-Crie o banco na sua conta Cloudflare e copie o UUID retornado para `database_id` em `wrangler.jsonc`, substituindo o UUID zerado de exemplo:
+A base `absolute-cinema-history` já está criada e vinculada em `wrangler.jsonc`. Se for executar o projeto em outra conta Cloudflare, crie uma base e atualize o `database_id` com o UUID retornado:
 
 ```bash
 npx wrangler d1 create absolute-cinema-history
