@@ -10,7 +10,7 @@ O projeto consulta os cinemas configurados em `src/ingresso.ts`. A programação
 https://api-content.ingresso.com/v0/sessions/city/473/theater/1537/partnership/home/groupBy/sessionType
 ```
 
-As sessões exibidas são legendadas e habilitadas. O retrospecto grava somente as sessões do Cinépolis Shopping Três Lagoas; os demais cinemas continuam aparecendo apenas na consulta ao vivo.
+As sessões exibidas são legendadas. Sessões esgotadas também aparecem quando continuam na programação; bloqueios por outros motivos permanecem ocultos. O retrospecto grava somente as sessões do Cinépolis Shopping Três Lagoas; os demais cinemas continuam aparecendo apenas na consulta ao vivo.
 
 ## Stack
 

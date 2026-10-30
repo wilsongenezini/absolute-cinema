@@ -58,6 +58,11 @@ export function isEnabled(session: Session): boolean {
   return session.enabled && !session.blockMessage;
 }
 
+/** Sessões esgotadas continuam fazendo parte da programação do cinema. */
+export function isSoldOut(session: Session): boolean {
+  return /lotad|esgotad/i.test(session.blockMessage);
+}
+
 export function isSubtitled(session: Session): boolean {
   return session.type.includes("Legendado");
 }
@@ -75,7 +80,10 @@ export function extractSubtitledMovies(
     for (const movie of day.movies) {
       const subtitledSessions = movie.sessionTypes
         .flatMap((group) => group.sessions)
-        .filter((session) => isSubtitled(session) && isEnabled(session));
+        .filter(
+          (session) =>
+            isSubtitled(session) && (isEnabled(session) || isSoldOut(session)),
+        );
 
       if (subtitledSessions.length === 0) continue;
 
