@@ -15,6 +15,12 @@ export const DEFAULT_THEATER_ID = "1537";
 export interface TheaterConfig {
   id: string;
   name: string;
+  /**
+   * Fuso IANA do cinema. Os horários das fontes são hora local do cinema;
+   * o offset que a API do ingresso.com anexa (-03:00) não é confiável
+   * (Três Lagoas está em UTC-4).
+   */
+  timeZone: string;
   source:
     | { kind: "ingresso"; cityId: string; theaterId: string }
     | { kind: "grupocine"; programacaoUrl: string };
@@ -24,16 +30,19 @@ export const THEATERS: TheaterConfig[] = [
   {
     id: "tres-lagoas",
     name: "Cinépolis Shopping Três Lagoas",
+    timeZone: "America/Campo_Grande",
     source: { kind: "ingresso", cityId: "473", theaterId: "1537" },
   },
   {
     id: "andradina",
     name: "Grupo Cine Andradina",
+    timeZone: "America/Sao_Paulo",
     source: { kind: "grupocine", programacaoUrl: "https://www.grupocine.com.br/andradina/programacao" },
   },
   {
     id: "aracatuba",
     name: "Cine Araújo Multiplex Praça Nova Araçatuba",
+    timeZone: "America/Sao_Paulo",
     source: { kind: "ingresso", cityId: "83", theaterId: "1645" },
   },
 ];
@@ -67,6 +76,11 @@ export function isSubtitled(session: Session): boolean {
   return session.type.includes("Legendado");
 }
 
+/** Sessão legendada que entra na listagem (à venda ou esgotada). */
+export function isListed(session: Session): boolean {
+  return isSubtitled(session) && (isEnabled(session) || isSoldOut(session));
+}
+
 /**
  * Reduz a resposta da API apenas aos filmes que possuem ao menos
  * uma sessão legendada, mantendo (e somando) as legendadas de todos os dias.
@@ -80,10 +94,7 @@ export function extractSubtitledMovies(
     for (const movie of day.movies) {
       const subtitledSessions = movie.sessionTypes
         .flatMap((group) => group.sessions)
-        .filter(
-          (session) =>
-            isSubtitled(session) && (isEnabled(session) || isSoldOut(session)),
-        );
+        .filter(isListed);
 
       if (subtitledSessions.length === 0) continue;
 
@@ -154,9 +165,16 @@ export async function fetchSessions(
   return (await response.json()) as SessionsResponse;
 }
 
+/** Recebe a resposta bruta da API do ingresso.com (ex.: para depuração) */
+export type RawSessionsListener = (
+  theater: TheaterConfig,
+  raw: SessionsResponse,
+) => void;
+
 /** Busca as sessões legendadas de um cinema, despachando pela fonte */
 export async function fetchTheater(
   theater: TheaterConfig,
+  onRaw?: RawSessionsListener,
 ): Promise<TheaterSessions> {
   if (theater.source.kind === "grupocine") {
     const html = await fetchGrupocineHtml(theater.source.programacaoUrl);
@@ -166,6 +184,7 @@ export async function fetchTheater(
     theater.source.cityId,
     theater.source.theaterId,
   );
+  onRaw?.(theater, sessions);
   return { theater, movies: extractSubtitledMovies(sessions) };
 }
 
@@ -173,11 +192,12 @@ export async function fetchTheater(
  * que falhar não derruba os demais */
 export async function fetchAllTheaters(
   theaters: TheaterConfig[],
+  onRaw?: RawSessionsListener,
 ): Promise<TheaterSessions[]> {
   return Promise.all(
     theaters.map(async (theater) => {
       try {
-        return await fetchTheater(theater);
+        return await fetchTheater(theater, onRaw);
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Erro inesperado";

@@ -1,9 +1,7 @@
 import {
   THEATERS,
   fetchAllTheaters,
-  fetchSessions,
-  isEnabled,
-  isSubtitled,
+  isListed,
   type TheaterConfig,
 } from "./ingresso.js";
 
@@ -18,6 +16,7 @@ const theaters: TheaterConfig[] =
         {
           id: "personalizado",
           name: "Cinema personalizado (env)",
+          timeZone: "America/Sao_Paulo",
           source: {
             kind: "ingresso",
             cityId: process.env.INGRESSO_CITY_ID,
@@ -27,7 +26,25 @@ const theaters: TheaterConfig[] =
       ]
     : THEATERS;
 
-const groups = await fetchAllTheaters(theaters);
+/** Totais da resposta bruta, coletados na mesma requisição da listagem */
+const debugLines: string[] = [];
+
+const groups = await fetchAllTheaters(
+  theaters,
+  wantsDebug
+    ? (theater, raw) => {
+        const sessions = raw.flatMap((day) =>
+          day.movies.flatMap((movie) =>
+            movie.sessionTypes.flatMap((group) => group.sessions),
+          ),
+        );
+        const totalMovies = raw.reduce((sum, day) => sum + day.movies.length, 0);
+        debugLines.push(
+          `[debug] ${theater.name}: filmes no período: ${totalMovies} | sessões: ${sessions.length} | legendadas/exibíveis: ${sessions.filter(isListed).length}`,
+        );
+      }
+    : undefined,
+);
 
 const allMovies = groups.flatMap((group) => group.movies);
 const totalSubtitledSessions = allMovies.reduce(
@@ -45,6 +62,7 @@ if (totalSubtitledSessions === 0) {
   for (const group of groups) {
     if (group.error) console.log(`⚠️  ${group.theater.name}: ${group.error}`);
   }
+  for (const line of debugLines) console.log(line);
   process.exit(0);
 }
 
@@ -77,29 +95,4 @@ for (const group of groups) {
   }
 }
 
-if (wantsDebug) {
-  for (let i = 0; i < theaters.length; i++) {
-    const theater = theaters[i]!;
-    if (theater.source.kind !== "ingresso") continue; // debug só para fonte API
-    const raw = await fetchSessions(theater.source.cityId, theater.source.theaterId);
-    let totalMovies = 0;
-    let totalSessions = 0;
-    let legendadas = 0;
-
-    for (const day of raw) {
-      totalMovies += day.movies.length;
-      for (const movie of day.movies) {
-        for (const groupType of movie.sessionTypes) {
-          for (const session of groupType.sessions) {
-            totalSessions += 1;
-            if (isSubtitled(session) && isEnabled(session)) legendadas += 1;
-          }
-        }
-      }
-    }
-
-    console.log(
-      `[debug] ${theater.name}: filmes no período: ${totalMovies} | sessões: ${totalSessions} | legendadas/exibíveis: ${legendadas}`,
-    );
-  }
-}
+for (const line of debugLines) console.log(line);

@@ -6,8 +6,8 @@
   "main": "src/worker.ts",
   "compatibility_date": "2026-10-22",
   "triggers": {
-    // 12:00 no horário de Três Lagoas (UTC-3).
-    "crons": ["0 15 * * *"]
+    // 09h, 12h, 15h, 18h e 21h no horário de Três Lagoas (MS, UTC-4).
+    "crons": ["0 1,13,16,19,22 * * *"]
   },
   "d1_databases": [
     {
@@ -26,8 +26,9 @@
     "run_worker_first": ["/api/*"]
   },
   "vars": {
-    // Restrinja após o primeiro deploy, ex.:
-    // "ALLOWED_ORIGIN": "https://absolute-cinema.<subconta>.workers.dev"
+    // Vazio: a API só é legível pelo próprio site (mesma origem).
+    // Para liberar outra origem, ex.:
+    // "ALLOWED_ORIGIN": "https://meu-outro-site.example"
     "ALLOWED_ORIGIN": ""
   }
 }

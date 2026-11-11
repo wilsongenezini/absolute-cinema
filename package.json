@@ -8,8 +8,6 @@
   },
   "scripts": {
     "start": "tsx src/index.ts",
-    "sessions": "tsx src/index.ts",
-    "legendado": "tsx src/index.ts",
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "check": "tsc && tsc -p tsconfig.worker.json",

@@ -6,14 +6,25 @@ import type { SubtitledMovie } from "./types.js";
 /** The retrospective is intentionally limited to the Três Lagoas theater. */
 export const HISTORY_THEATER_ID = "tres-lagoas";
 
-/** Local Três Lagoas midnight on the first day covered by this archive. */
-const HISTORY_START_AT = "2026-10-28T00:00:00-03:00";
+/**
+ * First local day covered by this archive. full_date holds local wall-clock
+ * ISO strings, so plain string comparison orders them correctly and lets
+ * SQLite use the full_date index.
+ */
+const HISTORY_START_AT = "2026-10-28";
 const MAX_BATCH_SIZE = 100;
 
 export interface HistoryPeriod {
   /** Local calendar month in YYYY-MM format. */
   month: string;
   movies: SubtitledMovie[];
+}
+
+export interface HistoryPage {
+  /** Every month with recorded sessions, newest first. */
+  months: string[];
+  /** The requested month (default: the newest one), when it has sessions. */
+  periods: HistoryPeriod[];
 }
 
 interface HistoryRow {
@@ -118,10 +129,38 @@ export async function recordTheaterHistory(
   }
 }
 
-/** Returns recorded Três Lagoas sessions grouped by their local month. */
+/** First instant (as a local ISO prefix) of the month after `month`. */
+function nextMonth(month: string): string {
+  const year = Number(month.slice(0, 4));
+  const monthNumber = Number(month.slice(5, 7));
+  return monthNumber === 12
+    ? `${year + 1}-01`
+    : `${year}-${String(monthNumber + 1).padStart(2, "0")}`;
+}
+
+/**
+ * Returns the list of recorded months plus the sessions of one of them
+ * (YYYY-MM; defaults to the newest), so the payload stays bounded as the
+ * archive grows.
+ */
 export async function readHistory(
   db: D1Database,
-): Promise<HistoryPeriod[]> {
+  requestedMonth?: string,
+): Promise<HistoryPage> {
+  const monthRows = await db
+    .prepare(
+      `SELECT DISTINCT substr(full_date, 1, 7) AS month
+      FROM history_sessions
+      WHERE full_date >= ?
+      ORDER BY month DESC`,
+    )
+    .bind(HISTORY_START_AT)
+    .all<{ month: string }>();
+  const months = monthRows.results.map(({ month }) => month);
+
+  const month = requestedMonth ?? months[0];
+  if (!month || !months.includes(month)) return { months, periods: [] };
+
   const { results } = await db
     .prepare(
       `SELECT
@@ -140,10 +179,10 @@ export async function readHistory(
         s.site_url AS sessionSiteUrl
       FROM history_sessions AS s
       INNER JOIN history_movies AS m ON m.id = s.movie_id
-      WHERE datetime(s.full_date) >= datetime(?)
-      ORDER BY datetime(s.full_date) DESC, m.title COLLATE NOCASE ASC`,
+      WHERE s.full_date >= ?1 AND s.full_date >= ?2 AND s.full_date < ?3
+      ORDER BY s.full_date DESC, m.title COLLATE NOCASE ASC`,
     )
-    .bind(HISTORY_START_AT)
+    .bind(HISTORY_START_AT, month, nextMonth(month))
     .all<HistoryRow>();
 
   const periods = new Map<
@@ -184,8 +223,11 @@ export async function readHistory(
     });
   }
 
-  return [...periods.values()].map(({ month, movies }) => ({
-    month,
-    movies: [...movies.values()],
-  }));
+  return {
+    months,
+    periods: [...periods.values()].map(({ month, movies }) => ({
+      month,
+      movies: [...movies.values()],
+    })),
+  };
 }

@@ -21,7 +21,28 @@ function labeled(text) {
   return label;
 }
 
-function movieCard(movie) {
+const HISTORY_TIME_ZONE = "America/Campo_Grande";
+
+/**
+ * Hora local de um fuso como "AAAA-MM-DDTHH:mm:ss". As sessões trazem a hora
+ * local do cinema, então a comparação é feita pelo relógio de parede — o
+ * offset anexado pelas fontes não é confiável.
+ */
+function wallClockNow(timeZone) {
+  try {
+    return new Intl.DateTimeFormat("sv-SE", {
+      timeZone,
+      dateStyle: "short",
+      timeStyle: "medium",
+    })
+      .format(new Date())
+      .replace(" ", "T");
+  } catch {
+    return "";
+  }
+}
+
+function movieCard(movie, timeZone) {
   const card = document.createElement("article");
   card.className = "movie-card";
 
@@ -44,7 +65,7 @@ function movieCard(movie) {
   }
 
   const list = document.createElement("ul");
-  const now = new Date();
+  const now = wallClockNow(timeZone);
   for (const session of movie.sessions) {
     const item = document.createElement("li");
     item.className = "session";
@@ -56,7 +77,7 @@ function movieCard(movie) {
     room.className = "room";
     room.textContent = `— ${session.room}`;
 
-    if (new Date(session.fullDate) <= now) item.classList.add("ended");
+    if (now && session.fullDate.slice(0, 19) <= now) item.classList.add("ended");
 
     item.append(time, room);
     list.append(item);
@@ -66,6 +87,8 @@ function movieCard(movie) {
 }
 
 function renderSessions(groups) {
+  if (!Array.isArray(groups)) throw new Error("Resposta de formato inesperado.");
+
   const totalSessions = groups.reduce(
     (sum, group) =>
       sum + group.movies.reduce((count, movie) => count + movie.sessions.length, 0),
@@ -104,7 +127,9 @@ function renderSessions(groups) {
       continue;
     }
 
-    for (const movie of group.movies) fragment.append(movieCard(movie));
+    for (const movie of group.movies) {
+      fragment.append(movieCard(movie, group.theater.timeZone));
+    }
   }
   results.replaceChildren(fragment);
 }
@@ -122,15 +147,57 @@ function monthLabel(month) {
   return label.charAt(0).toLocaleUpperCase("pt-BR") + label.slice(1);
 }
 
-function renderHistory(periods) {
-  const totalSessions = periods.reduce(
-    (sum, period) =>
-      sum + period.movies.reduce((count, movie) => count + movie.sessions.length, 0),
-    0,
-  );
+function historyPeriodNodes(period) {
+  const monthHeading = document.createElement("h3");
+  monthHeading.className = "history-month";
+  monthHeading.textContent = monthLabel(period.month);
+
+  return [
+    monthHeading,
+    ...period.movies.map((movie) => movieCard(movie, HISTORY_TIME_ZONE)),
+  ];
+}
+
+/** Botão que carrega, sob demanda, o próximo mês mais antigo do histórico. */
+function olderMonthButton(pendingMonths) {
+  const [month, ...rest] = pendingMonths;
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "cinema-btn secondary load-more";
+  const label = `Ver ${monthLabel(month)}`;
+  button.textContent = label;
+
+  button.addEventListener("click", async () => {
+    button.disabled = true;
+    button.textContent = "Carregando…";
+    button.nextElementSibling?.remove();
+
+    try {
+      const page = await requestJson(`/api/history?month=${month}`);
+      const nodes = (page.periods ?? []).flatMap(historyPeriodNodes);
+      if (rest.length > 0) nodes.push(olderMonthButton(rest));
+      button.replaceWith(...nodes);
+    } catch (error) {
+      button.disabled = false;
+      button.textContent = label;
+      const warning = document.createElement("p");
+      warning.className = "status error";
+      warning.textContent =
+        error instanceof Error ? error.message : "Erro inesperado.";
+      button.after(warning);
+    }
+  });
+
+  return button;
+}
+
+function renderHistory(page) {
+  if (!Array.isArray(page?.months) || !Array.isArray(page?.periods)) {
+    throw new Error("Resposta de formato inesperado.");
+  }
 
   subtitle.textContent = "Retrospecto do Cinépolis Shopping Três Lagoas";
-  if (totalSessions === 0) {
+  if (page.periods.length === 0) {
     setStatus("Ainda não há sessões legendadas registradas. 🍿");
     return;
   }
@@ -141,25 +208,21 @@ function renderHistory(periods) {
   theaterHeading.textContent = "Cinépolis Shopping Três Lagoas";
   fragment.append(theaterHeading);
 
-  for (const period of periods) {
-    const monthHeading = document.createElement("h3");
-    monthHeading.className = "history-month";
-    monthHeading.textContent = monthLabel(period.month);
-    fragment.append(monthHeading);
+  for (const period of page.periods) fragment.append(...historyPeriodNodes(period));
 
-    for (const movie of period.movies) fragment.append(movieCard(movie));
-  }
+  const loaded = new Set(page.periods.map((period) => period.month));
+  const pending = page.months.filter((month) => !loaded.has(month));
+  if (pending.length > 0) fragment.append(olderMonthButton(pending));
 
   results.replaceChildren(fragment);
 }
 
 async function requestJson(path) {
   const response = await fetch(path);
-  const data = await response.json();
+  const data = await response.json().catch(() => null);
   if (!response.ok) {
-    throw new Error(data.error || `A API respondeu ${response.status}.`);
+    throw new Error(data?.error || `A API respondeu ${response.status}.`);
   }
-  if (!Array.isArray(data)) throw new Error("Resposta de formato inesperado.");
   return data;
 }
 

@@ -131,9 +131,9 @@ function normalizeSpaces(text: string): string {
     .trim();
 }
 
-/** Mantém só o que completa o texto do film block evitando tags */
+/** Primeiro grupo capturado, sem tags; undefined quando ausente ou vazio */
 function firstCapture(source: string, regex: RegExp): string | undefined {
-  return normalizeSpaces(regex.exec(source)?.[1] ?? "");
+  return normalizeSpaces(regex.exec(source)?.[1] ?? "") || undefined;
 }
 
 /** Ex.: "1" → "Sala 1" */

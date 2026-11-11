@@ -1,3 +1,12 @@
+/* Bebas Neue (SIL Open Font License), servida pelo próprio site */
+@font-face {
+  font-family: "Bebas Neue";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./fonts/bebas-neue-latin.woff2") format("woff2");
+}
+
 :root {
   color-scheme: dark;
   --bg: radial-gradient(circle at 50% 0%, #1f1285 0%, #0a0620 55%, #05030f 100%);
@@ -106,6 +115,12 @@ body {
 
 .cinema-btn.secondary:hover:not(:disabled) {
   box-shadow: 0 10px 30px -12px hsl(41 92% 60% / 0.5);
+}
+
+.load-more {
+  align-self: center;
+  padding: 0.7rem 1.8rem;
+  font-size: 1rem;
 }
 
 .results {

@@ -24,8 +24,6 @@ As sessões exibidas são legendadas. Sessões esgotadas também aparecem quando
 ```bash
 npm install
 npm start            # lista os filmes com sessão legendada (nome, data e horário)
-npm run sessions     # idem
-npm run legendado    # idem
 npm run dev          # modo watch, refaz a requisição a cada execução
 npm run build        # compila a CLI para dist/ (não consulta a API)
 npm run dev:web      # site completo local: front + API em http://localhost:8787
@@ -64,7 +62,11 @@ O site oferece dois botões:
 - **Ver filmes legendados** consulta `/api/sessions` e mantém a programação ao vivo dos cinemas configurados.
 - **Ver retrospecto** consulta `/api/history` e exibe sessões legendadas registradas no Cinépolis Shopping Três Lagoas, agrupadas por mês.
 
-A mensagem abaixo do botão **Ver retrospecto** informa que o histórico começa em **28 de outubro de 2026**; ela aparece após clicar no botão. O Worker registra a programação de Três Lagoas ao consultar a programação ao vivo e também por uma coleta agendada diária ao meio-dia (12:00 no horário local). A coleta agendada acessa somente esse cinema.
+A mensagem abaixo do botão **Ver retrospecto** informa que o histórico começa em **28 de outubro de 2026**; ela aparece após clicar no botão. O retrospecto abre no mês mais recente e os anteriores são carregados sob demanda (`/api/history?month=AAAA-MM`).
+
+O histórico é gravado somente pela coleta agendada, que roda às 09h, 12h, 15h, 18h e 21h no horário de Três Lagoas (MS, UTC-4) e acessa apenas esse cinema. Visitas ao site não escrevem no banco.
+
+Os horários das sessões são hora local de cada cinema. A API do ingresso.com anexa `-03:00` também às sessões de Três Lagoas, então o site ignora esse offset e compara pelo fuso configurado em `THEATERS` (`timeZone`).
 
 ### Banco de dados (Cloudflare D1)
 
@@ -90,13 +92,17 @@ npm run deploy
 
 O histórico é acumulado a partir da implantação/coleta: a API de programação não fornece um arquivo completo de sessões antigas. Ele registra sessões anunciadas pela programação, não confirma que uma sessão ocorreu de fato.
 
-A rota `/api/sessions` funciona como proxy com CORS restritivo e cache de 60 s no edge — a API do ingresso.com não permite chamadas diretas do navegador (sem CORS), por isso o Worker é necessário. `/api/history` consulta o D1 e não é armazenada em cache.
+A rota `/api/sessions` funciona como proxy — a API do ingresso.com não permite chamadas diretas do navegador (sem CORS), por isso o Worker é necessário. `/api/history` consulta o D1.
+
+As duas rotas usam o cache do edge: a cópia fica fresca por 5 min (1 min se algum cinema falhou) e, depois disso, continua sendo servida por até 1 h enquanto o Worker a revalida em segundo plano, de modo que a visita não espera as fontes externas. O navegador reutiliza a resposta por 60 s.
+
+Sem `ALLOWED_ORIGIN`, nenhum header CORS é enviado e só o próprio site (mesma origem) lê a API pelo navegador.
 
 ### Publicação (passos manuais)
 
 1. `npx wrangler login` — autentica sua conta Cloudflare pelo navegador
 2. `npm run deploy` — publica; o CLI imprime a URL final (`*.workers.dev`)
-3. (Opcional) No dashboard do Cloudflare, defina a variável `ALLOWED_ORIGIN` no Worker com seu domínio final para reforçar o CORS
+3. (Opcional) Defina a variável `ALLOWED_ORIGIN` no Worker para liberar a API a um site em outra origem
 4. (Opcional) Conecte o repositório GitHub a uma Worker para deploy automático a cada `git push`
 
 A Worker se chama `tres-lagoas`; a URL final fica em `https://tres-lagoas.<subdomínio-da-conta>.workers.dev`.
@@ -120,5 +126,6 @@ absolute-cinema/
 └── web/                    # front-end (HTML/CSS/JS puro)
     ├── index.html
     ├── style.css
-    └── main.js
+    ├── main.js
+    └── fonts/              # Bebas Neue (OFL), servida localmente
 ```
