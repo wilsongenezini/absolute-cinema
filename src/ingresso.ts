@@ -3,6 +3,7 @@ import {
   fetchGrupocineHtml,
 } from "./grupocine.js";
 import type {
+  SeatAvailability,
   Session,
   SessionsResponse,
   SubtitledMovie,
@@ -165,16 +166,115 @@ export async function fetchSessions(
   return (await response.json()) as SessionsResponse;
 }
 
+/**
+ * Limite de consultas ao mapa de assentos por cinema, priorizando as sessões
+ * mais próximas. Mantém o total de subrequisições do Worker sob controle.
+ */
+const MAX_SEAT_LOOKUPS_PER_THEATER = 20;
+
+interface SeatMapResponse {
+  lines?: { seats?: { status?: string }[] }[];
+}
+
+/** Conta as poltronas livres do mapa de assentos de uma sessão. */
+export async function fetchSeatAvailability(
+  sessionId: string,
+  sectorId: string,
+): Promise<SeatAvailability> {
+  const url = `https://api.ingresso.com/v1/sessions/${encodeURIComponent(sessionId)}/sections/${encodeURIComponent(sectorId)}/seats?partnership=home`;
+  const response = await fetch(url, {
+    signal: AbortSignal.timeout(10_000),
+    headers: { accept: "application/json" },
+  });
+  if (!response.ok) {
+    throw new Error(`O mapa de assentos respondeu ${response.status}`);
+  }
+
+  const map = (await response.json()) as SeatMapResponse;
+  let available = 0;
+  let total = 0;
+  for (const line of map.lines ?? []) {
+    for (const seat of line.seats ?? []) {
+      total++;
+      if (seat.status === "Available") available++;
+    }
+  }
+  if (total === 0) throw new Error("Mapa de assentos vazio");
+  return { available, total };
+}
+
+/** Hora local de um fuso como "AAAA-MM-DDTHH:mm:ss" (relógio de parede). */
+function wallClockNow(timeZone: string): string {
+  return new Intl.DateTimeFormat("sv-SE", {
+    timeZone,
+    dateStyle: "short",
+    timeStyle: "medium",
+  })
+    .format(new Date())
+    .replace(" ", "T");
+}
+
+/**
+ * Preenche a ocupação das sessões que ainda não começaram. Falhas são
+ * silenciosas: a sessão apenas fica sem a porcentagem.
+ */
+async function attachSeatAvailability(
+  theater: TheaterConfig,
+  raw: SessionsResponse,
+  movies: SubtitledMovie[],
+): Promise<void> {
+  const sectorBySession = new Map<string, string>();
+  for (const day of raw) {
+    for (const movie of day.movies) {
+      for (const group of movie.sessionTypes) {
+        for (const session of group.sessions) {
+          if (session.hasSeatSelection !== false && session.defaultSector) {
+            sectorBySession.set(session.id, session.defaultSector);
+          }
+        }
+      }
+    }
+  }
+
+  const now = wallClockNow(theater.timeZone);
+  const upcoming = movies
+    .flatMap((movie) => movie.sessions)
+    .filter(
+      (session) =>
+        sectorBySession.has(session.id) && session.fullDate.slice(0, 19) > now,
+    )
+    .sort((a, b) => a.fullDate.localeCompare(b.fullDate))
+    .slice(0, MAX_SEAT_LOOKUPS_PER_THEATER);
+
+  await Promise.all(
+    upcoming.map(async (session) => {
+      try {
+        session.seats = await fetchSeatAvailability(
+          session.id,
+          sectorBySession.get(session.id)!,
+        );
+      } catch {
+        // Sem mapa de assentos: a sessão continua listada, só sem a ocupação
+      }
+    }),
+  );
+}
+
 /** Recebe a resposta bruta da API do ingresso.com (ex.: para depuração) */
 export type RawSessionsListener = (
   theater: TheaterConfig,
   raw: SessionsResponse,
 ) => void;
 
-/** Busca as sessões legendadas de um cinema, despachando pela fonte */
+/**
+ * Busca as sessões legendadas de um cinema, despachando pela fonte.
+ * Com `includeSeats`, consulta também a ocupação das próximas sessões
+ * (somente fontes do ingresso.com).
+ */
 export async function fetchTheater(
   theater: TheaterConfig,
   onRaw?: RawSessionsListener,
+  includeSeats = false,
 ): Promise<TheaterSessions> {
   if (theater.source.kind === "grupocine") {
     const html = await fetchGrupocineHtml(theater.source.programacaoUrl);
@@ -185,7 +285,9 @@ export async function fetchTheater(
     theater.source.theaterId,
   );
   onRaw?.(theater, sessions);
-  return { theater, movies: extractSubtitledMovies(sessions) };
+  const movies = extractSubtitledMovies(sessions);
+  if (includeSeats) await attachSeatAvailability(theater, sessions, movies);
+  return { theater, movies };
 }
 
 /** Busca as sessões legendadas de vários cinemas em paralelo; um cinema
@@ -197,7 +299,7 @@ export async function fetchAllTheaters(
   return Promise.all(
     theaters.map(async (theater) => {
       try {
-        return await fetchTheater(theater, onRaw);
+        return await fetchTheater(theater, onRaw, true);
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Erro inesperado";

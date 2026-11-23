@@ -42,6 +42,26 @@ function wallClockNow(timeZone) {
   }
 }
 
+/**
+ * Selo com a porcentagem de poltronas livres. A cor vai do vermelho (0%)
+ * ao verde (100%) pelo matiz HSL, definido em --seat-hue.
+ */
+function seatsBadge(seats) {
+  const { available, total } = seats ?? {};
+  if (!Number.isFinite(available) || !Number.isFinite(total) || total <= 0) {
+    return null;
+  }
+
+  const ratio = Math.min(Math.max(available / total, 0), 1);
+  const percent = Math.round(ratio * 100);
+  const badge = document.createElement("span");
+  badge.className = "seats";
+  badge.style.setProperty("--seat-hue", String(Math.round(ratio * 120)));
+  badge.textContent = available === 0 ? "Esgotada" : `${percent}% livres`;
+  badge.title = `${available} de ${total} poltronas livres`;
+  return badge;
+}
+
 function movieCard(movie, timeZone) {
   const card = document.createElement("article");
   card.className = "movie-card";
@@ -80,6 +100,8 @@ function movieCard(movie, timeZone) {
     if (now && session.fullDate.slice(0, 19) <= now) item.classList.add("ended");
 
     item.append(time, room);
+    const seats = seatsBadge(session.seats);
+    if (seats) item.append(seats);
     list.append(item);
   }
   card.append(list);

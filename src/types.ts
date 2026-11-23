@@ -19,6 +19,9 @@ export interface Session {
   realDate: SessionDate;
   time: string;
   siteURL: string | null;
+  /** Setor usado no mapa de assentos */
+  defaultSector?: string | null;
+  hasSeatSelection?: boolean;
   enabled: boolean;
   blockMessage: string;
 }
@@ -78,6 +81,13 @@ export interface SubtitledMovieSession {
   room: string;
   price: number;
   siteURL: string | null;
+  /** Poltronas livres no momento da consulta (ausente quando indisponível) */
+  seats?: SeatAvailability;
+}
+
+export interface SeatAvailability {
+  available: number;
+  total: number;
 }
 
 /** Filme com somente as sessões legendadas, pronto para exibição */

@@ -214,6 +214,19 @@ body {
   font-size: 0.9rem;
 }
 
+.session .seats {
+  --seat-hue: 120;
+  font-size: 0.78rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: hsl(var(--seat-hue) 85% 70%);
+  background: hsl(var(--seat-hue) 80% 45% / 0.16);
+  border: 1px solid hsl(var(--seat-hue) 75% 55% / 0.55);
+  border-radius: 999px;
+  padding: 0.1rem 0.55rem;
+  white-space: nowrap;
+}
+
 .session.ended {
   opacity: 0.55;
 }
