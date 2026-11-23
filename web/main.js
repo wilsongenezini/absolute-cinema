@@ -57,7 +57,7 @@ function seatsBadge(seats) {
   const badge = document.createElement("span");
   badge.className = "seats";
   badge.style.setProperty("--seat-hue", String(Math.round(ratio * 120)));
-  badge.textContent = available === 0 ? "Esgotada" : `${percent}% livres`;
+  badge.textContent = available === 0 ? "Esgotada" : `${percent}% livre`;
   badge.title = `${available} de ${total} poltronas livres`;
   return badge;
 }

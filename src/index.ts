@@ -88,7 +88,7 @@ for (const group of groups) {
         ? ` — R$ ${session.price.toFixed(2).replace(".", ",")}`
         : "";
       const seats = session.seats
-        ? ` — ${Math.round((session.seats.available / session.seats.total) * 100)}% livres`
+        ? ` — ${Math.round((session.seats.available / session.seats.total) * 100)}% livre`
         : "";
       console.log(
         `      🗓️  ${session.dayAndMonth} (${session.dayOfWeek}) às ${session.time} — ${session.room}${price}${seats}`,
