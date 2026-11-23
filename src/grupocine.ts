@@ -15,7 +15,11 @@
  *       </a>
  */
 
-import type { SubtitledMovie, SubtitledMovieSession } from "./types.js";
+import type {
+  SeatAvailability,
+  SubtitledMovie,
+  SubtitledMovieSession,
+} from "./types.js";
 
 const SITE_BASE = "https://www.grupocine.com.br";
 
@@ -117,6 +121,72 @@ export function extractSubtitledMoviesGrupocine(
       sessions: [...movie.sessions].sort((a, b) => a.fullDate.localeCompare(b.fullDate)),
     }))
     .sort((a, b) => a.title.localeCompare(b.title, "pt-BR"));
+}
+
+/**
+ * O link "Comprar" aponta para grupocine.com.br/venda/{base64}, em que o
+ * base64 é a URL da Velox Tickets terminada no ID da sessão.
+ */
+export function veloxSessionId(buyUrl: string | null): string | undefined {
+  const encoded = buyUrl?.match(/\/venda\/([\w-]+)/)?.[1];
+  if (!encoded) return undefined;
+  try {
+    const decoded = atob(encoded.replace(/-/g, "+").replace(/_/g, "/"));
+    const id = decoded.replace(/\/+$/, "").split("/").pop() ?? "";
+    return /^[0-9a-f]{32}$/i.test(id) ? id : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Lê a prévia do mapa de poltronas da Velox ("Preview Mapa da Sala"). A
+ * página traz as poltronas como um array JSON em `seats: [...]`.
+ */
+export async function fetchVeloxSeatAvailability(
+  sessionId: string,
+): Promise<SeatAvailability> {
+  const url = `https://www.veloxtickets.com/Parceiro/P-GRUPOCINE/AjaxService/Chairs/PreviewLayoutPartial/?sessionId=${encodeURIComponent(sessionId)}`;
+  const response = await fetch(url, {
+    signal: AbortSignal.timeout(10_000),
+    headers: { accept: "text/html" },
+  });
+  if (!response.ok) {
+    throw new Error(`O mapa da Velox respondeu ${response.status}`);
+  }
+
+  const seats = JSON.parse(extractJsonArray(await response.text(), /\bseats:\s*\[/)) as {
+    status?: string;
+  }[];
+  // Poltronas de outro setor não pertencem à sessão consultada
+  const inSession = seats.filter((seat) => seat.status !== "OUTROSETOR");
+  const available = inSession.filter((seat) => seat.status === "VAGO").length;
+  if (inSession.length === 0) throw new Error("Mapa de poltronas vazio");
+  return { available, total: inSession.length };
+}
+
+/** Recorta o array JSON que começa no "[" encontrado por `start`. */
+function extractJsonArray(source: string, start: RegExp): string {
+  const match = start.exec(source);
+  if (!match) throw new Error("Mapa de poltronas não encontrado");
+
+  const begin = match.index + match[0].length - 1;
+  let depth = 0;
+  let inString = false;
+  for (let i = begin; i < source.length; i++) {
+    const char = source[i];
+    if (inString) {
+      if (char === "\\") i++;
+      else if (char === '"') inString = false;
+    } else if (char === '"') {
+      inString = true;
+    } else if (char === "[") {
+      depth++;
+    } else if (char === "]" && --depth === 0) {
+      return source.slice(begin, i + 1);
+    }
+  }
+  throw new Error("Mapa de poltronas incompleto");
 }
 
 function matchAll(source: string, regex: RegExp): RegExpExecArray[] {

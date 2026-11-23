@@ -1,12 +1,15 @@
 import {
   extractSubtitledMoviesGrupocine,
   fetchGrupocineHtml,
+  fetchVeloxSeatAvailability,
+  veloxSessionId,
 } from "./grupocine.js";
 import type {
   SeatAvailability,
   Session,
   SessionsResponse,
   SubtitledMovie,
+  SubtitledMovieSession,
 } from "./types.js";
 
 export const DEFAULT_CITY_ID = "473";
@@ -214,15 +217,44 @@ function wallClockNow(timeZone: string): string {
     .replace(" ", "T");
 }
 
+/** Consulta do mapa de assentos de uma sessão; null quando não há mapa */
+type SeatLookup = (
+  session: SubtitledMovieSession,
+) => (() => Promise<SeatAvailability>) | null;
+
 /**
  * Preenche a ocupação das sessões que ainda não começaram. Falhas são
  * silenciosas: a sessão apenas fica sem a porcentagem.
  */
 async function attachSeatAvailability(
   theater: TheaterConfig,
-  raw: SessionsResponse,
   movies: SubtitledMovie[],
+  lookupFor: SeatLookup,
 ): Promise<void> {
+  const now = wallClockNow(theater.timeZone);
+  const lookups = movies
+    .flatMap((movie) => movie.sessions)
+    .filter((session) => session.fullDate.slice(0, 19) > now)
+    .sort((a, b) => a.fullDate.localeCompare(b.fullDate))
+    .flatMap((session) => {
+      const lookup = lookupFor(session);
+      return lookup ? [{ session, lookup }] : [];
+    })
+    .slice(0, MAX_SEAT_LOOKUPS_PER_THEATER);
+
+  await Promise.all(
+    lookups.map(async ({ session, lookup }) => {
+      try {
+        session.seats = await lookup();
+      } catch {
+        // Sem mapa de assentos: a sessão continua listada, só sem a ocupação
+      }
+    }),
+  );
+}
+
+/** Setor do mapa de assentos de cada sessão da resposta do ingresso.com */
+function ingressoSeatLookup(raw: SessionsResponse): SeatLookup {
   const sectorBySession = new Map<string, string>();
   for (const day of raw) {
     for (const movie of day.movies) {
@@ -236,29 +268,17 @@ async function attachSeatAvailability(
     }
   }
 
-  const now = wallClockNow(theater.timeZone);
-  const upcoming = movies
-    .flatMap((movie) => movie.sessions)
-    .filter(
-      (session) =>
-        sectorBySession.has(session.id) && session.fullDate.slice(0, 19) > now,
-    )
-    .sort((a, b) => a.fullDate.localeCompare(b.fullDate))
-    .slice(0, MAX_SEAT_LOOKUPS_PER_THEATER);
-
-  await Promise.all(
-    upcoming.map(async (session) => {
-      try {
-        session.seats = await fetchSeatAvailability(
-          session.id,
-          sectorBySession.get(session.id)!,
-        );
-      } catch {
-        // Sem mapa de assentos: a sessão continua listada, só sem a ocupação
-      }
-    }),
-  );
+  return (session) => {
+    const sector = sectorBySession.get(session.id);
+    return sector ? () => fetchSeatAvailability(session.id, sector) : null;
+  };
 }
+
+/** A sessão da Velox vem codificada no link de compra do Grupo Cine */
+const veloxSeatLookup: SeatLookup = (session) => {
+  const id = veloxSessionId(session.siteURL);
+  return id ? () => fetchVeloxSeatAvailability(id) : null;
+};
 
 /** Recebe a resposta bruta da API do ingresso.com (ex.: para depuração) */
 export type RawSessionsListener = (
@@ -268,8 +288,7 @@ export type RawSessionsListener = (
 
 /**
  * Busca as sessões legendadas de um cinema, despachando pela fonte.
- * Com `includeSeats`, consulta também a ocupação das próximas sessões
- * (somente fontes do ingresso.com).
+ * Com `includeSeats`, consulta também a ocupação das próximas sessões.
  */
 export async function fetchTheater(
   theater: TheaterConfig,
@@ -278,7 +297,9 @@ export async function fetchTheater(
 ): Promise<TheaterSessions> {
   if (theater.source.kind === "grupocine") {
     const html = await fetchGrupocineHtml(theater.source.programacaoUrl);
-    return { theater, movies: extractSubtitledMoviesGrupocine(html) };
+    const movies = extractSubtitledMoviesGrupocine(html);
+    if (includeSeats) await attachSeatAvailability(theater, movies, veloxSeatLookup);
+    return { theater, movies };
   }
   const sessions = await fetchSessions(
     theater.source.cityId,
@@ -286,7 +307,9 @@ export async function fetchTheater(
   );
   onRaw?.(theater, sessions);
   const movies = extractSubtitledMovies(sessions);
-  if (includeSeats) await attachSeatAvailability(theater, sessions, movies);
+  if (includeSeats) {
+    await attachSeatAvailability(theater, movies, ingressoSeatLookup(sessions));
+  }
   return { theater, movies };
 }
 
